@@ -2,6 +2,12 @@
 
 A local **Codex-first usage tracker** with a Go CLI and a small native macOS menu bar app. Inspired by [devopsinside/burn-o-meter](https://github.com/devopsinside/burn-o-meter), independently implemented in Go. Swift is used only for AppKit/SwiftUI presentation and managing the bundled Go process. **No Python, web server, telemetry, account connection, or third-party Go dependencies.**
 
+## Preview
+
+<img src="docs/images/burn-macos.png" alt="Burn's macOS menu bar app showing 30-day Codex usage, estimated API value, quota snapshots, and a model breakdown" width="420">
+
+*Burn’s macOS menu bar app showing recorded usage, estimated API value, and Codex quota snapshots.*
+
 ## Try it on your Mac
 
 Requires **macOS 13+**, **Go 1.25+**, and Apple's Command Line Tools (Swift 5.9+ recommended). Both Apple Silicon and Intel are supported by the build script; it builds for the machine running it.
