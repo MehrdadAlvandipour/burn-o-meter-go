@@ -1,0 +1,6 @@
+/dist/
+.DS_Store
+*.test
+coverage.out
+settings.json
+prices.local.json
