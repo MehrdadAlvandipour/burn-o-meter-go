@@ -20,7 +20,7 @@ make app
 open dist/Burn.app
 ```
 
-A `◉` followed by the token count appears in the menu bar. Click it for:
+A compact flame icon appears in the menu bar. Hover for the token count or click it for:
 
 - Today / 7-day / 30-day usage
 - Recorded input/output tokens and cache hit rate
@@ -29,7 +29,7 @@ A `◉` followed by the token count appears in the menu bar. Click it for:
 - Model, calendar-day, and project breakdowns
 - Accounting diagnostics and manual refresh
 
-The app refreshes every 15 seconds. **Closing the popover keeps tracking; Quit stops it.** It does not install a daemon or configure login startup. You can drag `dist/Burn.app` to `~/Applications` and add it in macOS System Settings → General → Login Items if you want it at login. Quit the app before replacing/rebuilding a running copy.
+The app refreshes every 15 seconds. **Closing the popover or dashboard window keeps tracking; Quit stops it.** If the icon is hidden in a crowded menu bar, run `open dist/Burn.app` again while Burn is running to open its dashboard in a window. You can also free menu bar space or check your menu bar manager's hidden items. It does not install a daemon or configure login startup. You can drag `dist/Burn.app` to `~/Applications` and add it in macOS System Settings → General → Login Items if you want it at login. Quit the app before replacing/rebuilding a running copy.
 
 The app is locally built and ad-hoc signed, not notarized for distribution. Do not disable Gatekeeper. Build from source on the Mac where you will use it.
 

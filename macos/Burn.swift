@@ -230,12 +230,17 @@ struct Dashboard: View {
     var status: NSStatusItem!
     let popover = NSPopover()
     var hosting: NSHostingController<Dashboard>!
+    var dashboardWindow: NSWindow?
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Keep a single engine when the application is opened repeatedly.
         let others = NSRunningApplication.runningApplications(withBundleIdentifier:Bundle.main.bundleIdentifier ?? "local.burn.meter")
         if others.contains(where:{$0.processIdentifier != ProcessInfo.processInfo.processIdentifier}) { NSApp.terminate(nil); return }
-        status = NSStatusBar.system.statusItem(withLength:NSStatusItem.variableLength)
-        status.button?.title = "◉ Burn"
+        // A growing token label can push the item out of a crowded menu bar.
+        status = NSStatusBar.system.statusItem(withLength:NSStatusItem.squareLength)
+        status.autosaveName = "BurnStatusItem"
+        status.button?.image = NSImage(systemSymbolName: "flame.fill", accessibilityDescription: "Burn usage")
+        status.button?.image?.isTemplate = true
+        status.button?.toolTip = "Burn · Reading local usage…"
         status.button?.target = self
         status.button?.action = #selector(toggle)
         popover.behavior = .transient
@@ -243,10 +248,32 @@ struct Dashboard: View {
         popover.contentViewController = hosting
         store.onChange = { [weak self] in
             guard let self else {return}
-            if self.store.error != nil {self.status.button?.title = "◉ Burn !"}
-            else if let snap = self.store.snapshot {self.status.button?.title = "◉ " + compact(snap.summary.total_tokens)}
+            if let error = self.store.error {self.status.button?.toolTip = "Burn · " + error}
+            else if let snap = self.store.snapshot {self.status.button?.toolTip = "Burn · " + compact(snap.summary.total_tokens) + " tokens"}
         }
         store.start()
+    }
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        // Opening the running app must work even when macOS hides its menu item.
+        guard status != nil else { return false }
+        popover.performClose(nil)
+        if dashboardWindow == nil {
+            let available = NSScreen.main?.visibleFrame.size ?? NSSize(width: 800, height: 700)
+            let size = NSSize(width: min(410, max(1, available.width - 32)),
+                              height: min(640, max(1, available.height - 64)))
+            let window = NSWindow(contentRect: NSRect(origin: .zero, size: size),
+                                  styleMask: [.titled, .closable, .miniaturizable],
+                                  backing: .buffered, defer: false)
+            window.title = "Burn"
+            window.isReleasedWhenClosed = false
+            window.contentViewController = NSHostingController(rootView: Dashboard(store: store, size: size))
+            window.center()
+            dashboardWindow = window
+        }
+        dashboardWindow?.deminiaturize(nil)
+        dashboardWindow?.makeKeyAndOrderFront(nil)
+        sender.activate(ignoringOtherApps: true)
+        return false
     }
     @objc func toggle() {
         if popover.isShown {popover.performClose(nil)}
