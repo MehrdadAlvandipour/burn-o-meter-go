@@ -131,8 +131,11 @@ func compact(_ n: Int64) -> String {
 
 struct Dashboard: View {
     @ObservedObject var store: Store
+    var size = NSSize(width: 410, height: 640)
     @State private var detail = "Models"
     var body: some View {
+        VStack(spacing: 0) {
+        ScrollView(.vertical) {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "flame.fill").foregroundStyle(.orange)
@@ -142,7 +145,7 @@ struct Dashboard: View {
             }
             Picker("Period", selection: $store.period) {
                 Text("Today").tag("today"); Text("7 days").tag("7d"); Text("30 days").tag("30d")
-            }.pickerStyle(.segmented).onChange(of: store.period) { _ in store.start() }
+            }.pickerStyle(.segmented).labelsHidden().onChange(of: store.period) { _ in store.start() }
             if let error = store.error {
                 Label(error, systemImage:"exclamationmark.triangle.fill").foregroundStyle(.orange).font(.callout)
             }
@@ -184,8 +187,7 @@ struct Dashboard: View {
                 Divider()
                 Picker("Breakdown",selection:$detail) {
                     Text("Models").tag("Models");Text("Days").tag("Days");Text("Projects").tag("Projects")
-                }.pickerStyle(.segmented)
-                ScrollView {
+                }.pickerStyle(.segmented).labelsHidden()
                     VStack(alignment:.leading,spacing:10) {
                         ForEach(detail == "Days" ? data.daily : detail == "Projects" ? data.projects : data.models) { row in
                             HStack {
@@ -199,7 +201,6 @@ struct Dashboard: View {
                         }
                         if data.summary.usage_updates == 0 { Text("No recorded usage in this period.").foregroundStyle(.secondary) }
                     }
-                }.frame(maxHeight:170)
                 if data.diagnostics.problems > 0 {
                     Text("⚠ \(data.diagnostics.problems) accounting issues. Run burn doctor for details.").font(.caption).foregroundStyle(.orange)
                 }
@@ -208,13 +209,16 @@ struct Dashboard: View {
                 Text("\(data.diagnostics.files) files · \(data.diagnostics.reconciled_sessions) sessions reconciled · \(data.diagnostics.inferred_counter_resets) inferred resets")
                     .font(.caption2).foregroundStyle(.secondary)
             } else if store.error == nil { ProgressView("Reading local usage…").padding(.vertical) }
+        }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
+        }
+            Divider()
             HStack {
                 Button("Refresh") { store.start() }
                 if let updated = store.lastUpdate { Text(updated,style:.time).font(.caption2).foregroundStyle(.secondary) }
                 Spacer()
                 Button("Quit") { NSApp.terminate(nil) }.keyboardShortcut("q")
-            }
-        }.padding(20).frame(width:410)
+            }.padding(.horizontal, 20).padding(.vertical, 12)
+        }.frame(width: size.width, height: size.height)
     }
     func metric(_ title:String,_ value:String)->some View {
         VStack(alignment:.leading,spacing:5) {Text(title).font(.caption).foregroundStyle(.secondary);Text(value).font(.system(size:26,weight:.semibold,design:.rounded)).monospacedDigit()}
@@ -225,6 +229,7 @@ struct Dashboard: View {
     let store = Store()
     var status: NSStatusItem!
     let popover = NSPopover()
+    var hosting: NSHostingController<Dashboard>!
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Keep a single engine when the application is opened repeatedly.
         let others = NSRunningApplication.runningApplications(withBundleIdentifier:Bundle.main.bundleIdentifier ?? "local.burn.meter")
@@ -234,7 +239,8 @@ struct Dashboard: View {
         status.button?.target = self
         status.button?.action = #selector(toggle)
         popover.behavior = .transient
-        popover.contentViewController = NSHostingController(rootView:Dashboard(store:store))
+        hosting = NSHostingController(rootView:Dashboard(store:store))
+        popover.contentViewController = hosting
         store.onChange = { [weak self] in
             guard let self else {return}
             if self.store.error != nil {self.status.button?.title = "◉ Burn !"}
@@ -244,7 +250,17 @@ struct Dashboard: View {
     }
     @objc func toggle() {
         if popover.isShown {popover.performClose(nil)}
-        else if let button = status.button {popover.show(relativeTo:button.bounds,of:button,preferredEdge:.minY);NSApp.activate(ignoringOtherApps:true)}
+        else if let button = status.button {
+            // Use the menu item's screen, including scaled/multiple displays.
+            // Leave room for the popover arrow and screen edges.
+            let available = (button.window?.screen ?? NSScreen.main)?.visibleFrame.size ?? NSSize(width: 800, height: 700)
+            let size = NSSize(width: min(410, max(1, available.width - 32)),
+                              height: min(640, max(1, available.height - 32)))
+            hosting.rootView = Dashboard(store: store, size: size)
+            popover.contentSize = size
+            popover.show(relativeTo:button.bounds,of:button,preferredEdge:.minY)
+            NSApp.activate(ignoringOtherApps:true)
+        }
     }
     func applicationWillTerminate(_ notification: Notification) {store.stop()}
 }
